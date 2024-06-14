@@ -1,4 +1,5 @@
 import * as cdk from "aws-cdk-lib";
+import { HttpUserPoolAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import { Construct } from "constructs";
 import * as path from "path";
 
@@ -79,5 +80,67 @@ export class BackendStack extends cdk.Stack {
     ProductTable.grantReadWriteData(uploadFileLambda);
     bucket.grantPut(uploadFileLambda);
     bucket.grantPutAcl(uploadFileLambda);
+
+    const userPool = new cdk.aws_cognito.UserPool(this, "UserPool", {
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: false,
+        requireUppercase: false,
+        requireDigits: false,
+        requireSymbols: false,
+      },
+      signInAliases: {
+        email: true,
+      },
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: true,
+        },
+      },
+      customAttributes: {
+        name: new cdk.aws_cognito.StringAttribute({
+          minLen: 3,
+          maxLen: 20,
+        }),
+      },
+      lambdaTriggers: {
+        postConfirmation: postConfirmation,
+      },
+    });
+
+    const client = new cdk.aws_cognito.UserPoolClient(this, "UserPoolClient", {
+      userPool: userPool,
+      authFlows: {
+        userPassword: true,
+        userSrp: true,
+      },
+    });
+
+    new cdk.CfnOutput(this, "USERPOOL ID", {
+      value: userPool.userPoolId,
+    });
+
+    new cdk.CfnOutput(this, "CLIENT ID", {
+      value: client.userPoolClientId,
+    });
+    const adminGroup = new cdk.aws_cognito.CfnUserPoolGroup(
+      this,
+      "AdminGroup",
+      {
+        userPoolId: userPool.userPoolId,
+        groupName: "admin",
+        description: "Admin User Group",
+      }
+    );
+
+    const authorizer = new HttpUserPoolAuthorizer(
+      "UserpoolAuthorizer",
+      userPool,
+      {
+        userPoolClients: [client],
+        identitySource: ["$request.header.Authorization"],
+      }
+    );
   }
 }
