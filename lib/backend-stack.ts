@@ -62,5 +62,22 @@ export class BackendStack extends cdk.Stack {
         },
       ],
     });
+
+    const uploadFileLambda = new cdk.aws_lambda_nodejs.NodejsFunction(
+      this,
+      "UploadFileFunction",
+      {
+        entry: path.join(__dirname, "UploadFile", "handler.ts"),
+        handler: "handler",
+        environment: {
+          TABLE_NAME: ProductTable.tableName,
+          BUCKET_NAME: bucket.bucketName,
+        },
+      }
+    );
+
+    ProductTable.grantReadWriteData(uploadFileLambda);
+    bucket.grantPut(uploadFileLambda);
+    bucket.grantPutAcl(uploadFileLambda);
   }
 }

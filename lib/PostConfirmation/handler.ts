@@ -1,3 +1,5 @@
+// npm i @aws-sdk/client-dynamodb @aws-sdk/util-dynamodb
+//npm i -D @types/aws-lambda esbuild
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { marshall } from "@aws-sdk/util-dynamodb";
 import { PostConfirmationConfirmSignUpTriggerEvent } from "aws-lambda";
