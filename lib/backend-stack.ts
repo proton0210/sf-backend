@@ -1,5 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import { HttpUserPoolAuthorizer } from "aws-cdk-lib/aws-apigatewayv2-authorizers";
+import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { Construct } from "constructs";
 import * as path from "path";
 
@@ -140,6 +141,47 @@ export class BackendStack extends cdk.Stack {
       {
         userPoolClients: [client],
         identitySource: ["$request.header.Authorization"],
+      }
+    );
+
+    const API = new cdk.aws_apigatewayv2.HttpApi(this, "API ", {
+      apiName: "SFAPI",
+      corsPreflight: {
+        allowHeaders: ["*"],
+        allowMethods: [
+          cdk.aws_apigatewayv2.CorsHttpMethod.GET,
+          cdk.aws_apigatewayv2.CorsHttpMethod.PUT,
+          cdk.aws_apigatewayv2.CorsHttpMethod.POST,
+          cdk.aws_apigatewayv2.CorsHttpMethod.DELETE,
+          cdk.aws_apigatewayv2.CorsHttpMethod.OPTIONS,
+        ],
+        allowOrigins: ["*"],
+        maxAge: cdk.Duration.days(10),
+      },
+      defaultAuthorizer: new HttpUserPoolAuthorizer(
+        "UserPoolAuthorizer",
+        userPool
+      ),
+    });
+
+    new cdk.CfnOutput(this, "API Gateway URL", {
+      value: API.url ?? "Something went wrong",
+    });
+
+    const uploadFileRoute = new cdk.aws_apigatewayv2.HttpRoute(
+      this,
+      "uploadFileRoute",
+      {
+        httpApi: API,
+        routeKey: cdk.aws_apigatewayv2.HttpRouteKey.with(
+          "/uploadFile",
+          cdk.aws_apigatewayv2.HttpMethod.POST
+        ),
+        integration: new HttpLambdaIntegration(
+          "uploadFileLambdaIntegration",
+          uploadFileLambda
+        ),
+        authorizer: authorizer,
       }
     );
   }
