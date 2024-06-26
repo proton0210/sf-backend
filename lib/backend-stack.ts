@@ -287,5 +287,35 @@ export class BackendStack extends cdk.Stack {
         }
       )
     );
+
+    const createOrderTask = new cdk.aws_stepfunctions_tasks.LambdaInvoke(
+      this,
+      "CreateOrderTask",
+      {
+        lambdaFunction: createOrder,
+      }
+    );
+
+    const parallelState = new cdk.aws_stepfunctions.Parallel(
+      this,
+      "parallelState",
+      {}
+    );
+    parallelState.branch(updateItemStockMappedtask, createOrderTask);
+
+    const chain = isIteminStockMappedTask.next(parallelState);
+    const stateMachine = new cdk.aws_stepfunctions.StateMachine(
+      this,
+      "EcomStateMachine",
+      {
+        definitionBody:
+          cdk.aws_stepfunctions.DefinitionBody.fromChainable(chain),
+      }
+    );
+    stateMachine.grantStartExecution(stepFunctionProxyLambda);
+    stepFunctionProxyLambda.addEnvironment(
+      "STATE_MACHINE_ARN",
+      stateMachine.stateMachineArn
+    );
   }
 }
