@@ -254,5 +254,38 @@ export class BackendStack extends cdk.Stack {
         authorizer: authorizer,
       }
     );
+
+    const isIteminStockMappedTask = new cdk.aws_stepfunctions.Map(
+      this,
+      "IsItemInStockMappedStock",
+      {
+        itemsPath: "$.order",
+        resultPath: cdk.aws_stepfunctions.JsonPath.DISCARD,
+      }
+    ).itemProcessor(
+      new cdk.aws_stepfunctions_tasks.LambdaInvoke(this, "isIteminStockTask", {
+        lambdaFunction: isItemInStock,
+        payloadResponseOnly: true,
+      })
+    );
+
+    const updateItemStockMappedtask = new cdk.aws_stepfunctions.Map(
+      this,
+      "updateItemStockMappedTask",
+      {
+        itemsPath: "$.order",
+        itemSelector: {
+          "item.$": "$$.Map.Item.Value",
+        },
+      }
+    ).itemProcessor(
+      new cdk.aws_stepfunctions_tasks.LambdaInvoke(
+        this,
+        "updateItemInStockTask",
+        {
+          lambdaFunction: updateItemStock,
+        }
+      )
+    );
   }
 }
