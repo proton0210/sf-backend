@@ -227,5 +227,32 @@ export class BackendStack extends cdk.Stack {
     );
 
     OrderTable.grantReadWriteData(createOrder);
+
+    const stepFunctionProxyLambda = new cdk.aws_lambda_nodejs.NodejsFunction(
+      this,
+      "StepFunctionsProxy",
+      {
+        entry: path.join(__dirname, "StepFunctionsProxy", "handler.ts"),
+        handler: "handler",
+        runtime: cdk.aws_lambda.Runtime.NODEJS_20_X,
+      }
+    );
+
+    const createOirderReourceRoute = new cdk.aws_apigatewayv2.HttpRoute(
+      this,
+      "CreateOrderResourceRoute",
+      {
+        httpApi: API,
+        routeKey: cdk.aws_apigatewayv2.HttpRouteKey.with(
+          "/createOrder",
+          cdk.aws_apigatewayv2.HttpMethod.POST
+        ),
+        integration: new HttpLambdaIntegration(
+          "CreateOrderIntegration",
+          stepFunctionProxyLambda
+        ),
+        authorizer: authorizer,
+      }
+    );
   }
 }
